@@ -25,7 +25,7 @@ class CommonTest extends LaraAlertTestCase
 
         $this->artisan('migrate', [
             '--database' => 'testbench',
-            '--realpath' => realpath(__DIR__ . '/../migrations'),
+            '--realpath' => realpath(__DIR__.'/../migrations'),
         ]);
 
         $this->loadLaravelMigrations(['--database' => 'testbench']);
@@ -37,9 +37,9 @@ class CommonTest extends LaraAlertTestCase
     {
         $app['config']->set('database.default', 'testbench');
         $app['config']->set('database.connections.testbench', [
-            'driver' => 'sqlite',
+            'driver'   => 'sqlite',
             'database' => ':memory:',
-            'prefix' => '',
+            'prefix'   => '',
         ]);
 
         Schema::create('books', function ($table) {
@@ -62,8 +62,8 @@ class CommonTest extends LaraAlertTestCase
     public function createRandomUser()
     {
         return User::query()->create([
-            'email' => $this->faker->unique()->email,
-            'name' => $this->faker->name,
+            'email'    => $this->faker->unique()->email,
+            'name'     => $this->faker->name,
             'password' => Hash::make($this->faker->password),
         ]);
     }
@@ -104,11 +104,11 @@ class CommonTest extends LaraAlertTestCase
 
         $this->assertDatabaseHas('laraalert_alerts', [
             'alertable_type' => $stub->getMorphClass(),
-            'alertable_id' => $stub->id,
-            'user_id' => $user->id,
-            'type' => 'alert',
-            'description' => null,
-            'seen_at' => null,
+            'alertable_id'   => $stub->id,
+            'user_id'        => $user->id,
+            'type'           => 'alert',
+            'description'    => null,
+            'seen_at'        => null,
         ]);
 
         $this->assertEquals(1, $stub->alertsCount());
@@ -142,11 +142,11 @@ class CommonTest extends LaraAlertTestCase
 
         $this->assertDatabaseHas('laraalert_alerts', [
             'alertable_type' => $stub->getMorphClass(),
-            'alertable_id' => $stub->id,
-            'user_id' => $user->id,
-            'type' => 'some-type',
-            'description' => null,
-            'seen_at' => null,
+            'alertable_id'   => $stub->id,
+            'user_id'        => $user->id,
+            'type'           => 'some-type',
+            'description'    => null,
+            'seen_at'        => null,
         ]);
 
         $this->assertEquals(1, $stub->alertsCount());
@@ -183,11 +183,11 @@ class CommonTest extends LaraAlertTestCase
 
         $this->assertDatabaseHas('laraalert_alerts', [
             'alertable_type' => $stub->getMorphClass(),
-            'alertable_id' => $stub->id,
-            'user_id' => $alerter->id,
-            'type' => 'alert',
-            'description' => null,
-            'seen_at' => null,
+            'alertable_id'   => $stub->id,
+            'user_id'        => $alerter->id,
+            'type'           => 'alert',
+            'description'    => null,
+            'seen_at'        => null,
         ]);
 
         $this->assertEquals(1, $stub->alertsCount());
@@ -224,11 +224,11 @@ class CommonTest extends LaraAlertTestCase
 
         $this->assertDatabaseHas('laraalert_alerts', [
             'alertable_type' => $stub->getMorphClass(),
-            'alertable_id' => $stub->id,
-            'user_id' => $alerter->id,
-            'type' => 'some-type',
-            'description' => null,
-            'seen_at' => null,
+            'alertable_id'   => $stub->id,
+            'user_id'        => $alerter->id,
+            'type'           => 'some-type',
+            'description'    => null,
+            'seen_at'        => null,
         ]);
 
         $this->assertEquals(1, $stub->alertsCount());
@@ -267,11 +267,11 @@ class CommonTest extends LaraAlertTestCase
 
         $this->assertDatabaseHas('laraalert_alerts', [
             'alertable_type' => $stub->getMorphClass(),
-            'alertable_id' => $stub->id,
-            'user_id' => $alerter->id,
-            'type' => 'some-type',
-            'description' => $description,
-            'seen_at' => null,
+            'alertable_id'   => $stub->id,
+            'user_id'        => $alerter->id,
+            'type'           => 'some-type',
+            'description'    => $description,
+            'seen_at'        => null,
         ]);
 
         $this->assertEquals(1, $stub->alertsCount());
@@ -290,8 +290,8 @@ class CommonTest extends LaraAlertTestCase
 
         for ($i = 0; $i < 10; $i++) {
             $data[] = [
-                'alerter' => $this->createRandomUser(),
-                'type' => $this->faker->word,
+                'alerter'     => $this->createRandomUser(),
+                'type'        => $this->faker->word,
                 'description' => $this->faker->text,
             ];
         }
@@ -318,11 +318,11 @@ class CommonTest extends LaraAlertTestCase
         foreach ($data as $datum) {
             $this->assertDatabaseHas('laraalert_alerts', [
                 'alertable_type' => $stub->getMorphClass(),
-                'alertable_id' => $stub->id,
-                'user_id' => $datum['alerter']->id,
-                'description' => $datum['description'],
-                'type' => $datum['type'],
-                'seen_at' => null,
+                'alertable_id'   => $stub->id,
+                'user_id'        => $datum['alerter']->id,
+                'description'    => $datum['description'],
+                'type'           => $datum['type'],
+                'seen_at'        => null,
             ]);
 
             $this->assertTrue($stub->isAlertedBy($datum['alerter']));
@@ -346,8 +346,8 @@ class CommonTest extends LaraAlertTestCase
 
         /** @var Alert $alert */
         $alert = $stub->alerts()->save(new Alert([
-            'user_id' => $user->id,
-            'type' => $type,
+            'user_id'     => $user->id,
+            'type'        => $type,
             'description' => $description,
         ]));
 
@@ -366,20 +366,20 @@ class CommonTest extends LaraAlertTestCase
 
         $this->assertDatabaseHas('laraalert_alerts', [
             'alertable_type' => $stub->getMorphClass(),
-            'alertable_id' => $stub->id,
-            'user_id' => $user->id,
-            'type' => $type,
-            'description' => $description,
-            'seen_at' => null,
+            'alertable_id'   => $stub->id,
+            'user_id'        => $user->id,
+            'type'           => $type,
+            'description'    => $description,
+            'seen_at'        => null,
         ]);
 
         $this->assertDatabaseHas('laraalert_alerts', [
             'alertable_type' => $stub->getMorphClass(),
-            'alertable_id' => $stub->id,
-            'user_id' => $user->id,
-            'type' => $newType,
-            'description' => $newDescription,
-            'seen_at' => null,
+            'alertable_id'   => $stub->id,
+            'user_id'        => $user->id,
+            'type'           => $newType,
+            'description'    => $newDescription,
+            'seen_at'        => null,
         ]);
 
         $this->assertEquals(2, $stub->alertsCount());
@@ -400,8 +400,8 @@ class CommonTest extends LaraAlertTestCase
 
         /** @var Alert $alert */
         $alert = $stub->alerts()->save(new Alert([
-            'user_id' => $alerter->id,
-            'type' => $type,
+            'user_id'     => $alerter->id,
+            'type'        => $type,
             'description' => $description,
         ]));
 
@@ -423,20 +423,20 @@ class CommonTest extends LaraAlertTestCase
 
         $this->assertDatabaseHas('laraalert_alerts', [
             'alertable_type' => $stub->getMorphClass(),
-            'alertable_id' => $stub->id,
-            'user_id' => $alerter->id,
-            'type' => $type,
-            'description' => $description,
-            'seen_at' => null,
+            'alertable_id'   => $stub->id,
+            'user_id'        => $alerter->id,
+            'type'           => $type,
+            'description'    => $description,
+            'seen_at'        => null,
         ]);
 
         $this->assertDatabaseHas('laraalert_alerts', [
             'alertable_type' => $stub->getMorphClass(),
-            'alertable_id' => $stub->id,
-            'user_id' => $alerter->id,
-            'type' => $newType,
-            'description' => $newDescription,
-            'seen_at' => null,
+            'alertable_id'   => $stub->id,
+            'user_id'        => $alerter->id,
+            'type'           => $newType,
+            'description'    => $newDescription,
+            'seen_at'        => null,
         ]);
 
         $this->assertEquals(2, $stub->alertsCount());
@@ -454,7 +454,7 @@ class CommonTest extends LaraAlertTestCase
         $this->actingAs($user);
 
         /** @var Alert $alert */
-        $alert = $stub->alerts()->save(new Alert(['user_id' => $user->id,]));
+        $alert = $stub->alerts()->save(new Alert(['user_id' => $user->id]));
 
         $this->assertTrue($alert->isNew());
         $this->assertFalse($alert->isSeen());
@@ -463,8 +463,8 @@ class CommonTest extends LaraAlertTestCase
 
         $this->assertDatabaseHas('laraalert_alerts', [
             'alertable_type' => $stub->getMorphClass(),
-            'alertable_id' => $stub->id,
-            'user_id' => $user->id,
+            'alertable_id'   => $stub->id,
+            'user_id'        => $user->id,
         ]);
 
         $this->assertFalse($alert->isNew());

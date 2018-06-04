@@ -26,7 +26,7 @@ class Alert extends Model
     protected $fillable = [
         'user_id',
         'type',
-        'description'
+        'description',
     ];
 
     /**

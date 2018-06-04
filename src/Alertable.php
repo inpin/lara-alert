@@ -6,8 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\User;
 
 /**
- * Trait Alertable
- * @package Inpin\LaraAlert
+ * Trait Alertable.
  *
  * @property-read int alertsCount
  * @property-read bool isAlerted
@@ -33,7 +32,7 @@ trait Alertable
      * Fetch records that are alerted by a given user.
      * Ex: Book::whereAlertedBy(123)->get();.
      *
-     * @param Builder $query
+     * @param Builder          $query
      * @param User|string|null $guard
      *
      * @return Builder|static
@@ -71,7 +70,7 @@ trait Alertable
     /**
      * This method will create a alert on current model, attach given alertItemIds, and return it.
      *
-     * @param string $type
+     * @param string      $type
      * @param User|string $guard
      * @param null|string $description
      *
@@ -83,14 +82,14 @@ trait Alertable
             $guard = $this->loggedInUser($guard);
 
             if (is_null($guard)) {
-                return null;
+                return;
             }
         }
 
         $alert = new Alert([
-            'user_id' => $guard->id,
-            'type' => $type,
-            'description' => $description
+            'user_id'     => $guard->id,
+            'type'        => $type,
+            'description' => $description,
         ]);
 
         /** @var Alert $alert */
@@ -166,9 +165,9 @@ trait Alertable
     /**
      * Delete alerts related to the current record.
      *
-     * @return mixed
-     *
      * @throws \Exception
+     *
+     * @return mixed
      */
     public function removeAlerts()
     {
