@@ -5,6 +5,13 @@ namespace Inpin\LaraAlert;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\User;
 
+/**
+ * Trait Alertable
+ * @package Inpin\LaraAlert
+ *
+ * @property-read int alertsCount
+ * @property-read bool isAlerted
+ */
 trait Alertable
 {
     /**
@@ -99,7 +106,7 @@ trait Alertable
      *
      * @return bool
      */
-    public function isAlerted($guard = null)
+    public function isAlertedBy($guard = null)
     {
         if (!($guard instanceof User)) {
             $guard = $this->loggedInUser($guard);
@@ -112,6 +119,11 @@ trait Alertable
         return $this->alerts()
             ->where('user_id', '=', $guard->id)
             ->exists();
+    }
+
+    public function isAlerted()
+    {
+        return $this->alerts()->exists();
     }
 
     public function alertsCount()
