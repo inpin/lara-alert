@@ -1,6 +1,6 @@
 <?php
 
-namespace Inpin\LaraReport;
+namespace Inpin\LaraAlert;
 
 use Illuminate\Support\ServiceProvider;
 
