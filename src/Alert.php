@@ -15,6 +15,8 @@ use Illuminate\Foundation\Auth\User;
  * @property string user_message
  * @property User user
  * @property Model Alertable
+ * @property-read  bool isSeen
+ * @property-read  bool isNew
  */
 class Alert extends Model
 {
@@ -45,7 +47,7 @@ class Alert extends Model
     public function user()
     {
         return $this->belongsTo(
-            'App\Models\User',
+            'Illuminate\Foundation\Auth\User',
             'user_id',
             'id'
         );
@@ -59,6 +61,8 @@ class Alert extends Model
     public function seen()
     {
         $this->seen_at = Carbon::now();
+
+        return $this->save();
     }
 
     /**
@@ -72,6 +76,14 @@ class Alert extends Model
     }
 
     /**
+     * Populate the $alert->isNew attribute.
+     */
+    public function getIsNewAttribute()
+    {
+        return $this->isNew();
+    }
+
+    /**
      * Check if current alert is seen or not.
      *
      * @return bool
@@ -79,5 +91,13 @@ class Alert extends Model
     public function isSeen()
     {
         return !$this->isNew();
+    }
+
+    /**
+     * Populate the $alert->isSeen attribute.
+     */
+    public function getIsSeenAttribute()
+    {
+        return $this->isSeen();
     }
 }
