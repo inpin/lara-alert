@@ -7,11 +7,10 @@ use Illuminate\Database\Eloquent\Model as Eloquent;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
-use Inpin\LaraReport\Alert;
-use Inpin\LaraReport\Reportable;
-use Inpin\LaraReport\ReportItem;
+use Inpin\LaraAlert\Alert;
+use Inpin\LaraAlert\Alertable;
 
-class CommonTest extends TestCase
+class CommonTest extends LaraAlertTestCase
 {
     /**
      * @var Generator
@@ -26,28 +25,21 @@ class CommonTest extends TestCase
 
         $this->artisan('migrate', [
             '--database' => 'testbench',
-            '--realpath' => realpath(__DIR__.'/../migrations'),
+            '--realpath' => realpath(__DIR__ . '/../migrations'),
         ]);
 
         $this->loadLaravelMigrations(['--database' => 'testbench']);
 
         $this->faker = resolve(Generator::class);
-
-        for ($i = 0; $i < 10; $i++) {
-            ReportItem::query()->create([
-                'type'  => $this->faker->randomElement(['book', 'something-else']),
-                'title' => $this->faker->text(),
-            ]);
-        }
     }
 
     protected function getEnvironmentSetUp($app)
     {
         $app['config']->set('database.default', 'testbench');
         $app['config']->set('database.connections.testbench', [
-            'driver'   => 'sqlite',
+            'driver' => 'sqlite',
             'database' => ':memory:',
-            'prefix'   => '',
+            'prefix' => '',
         ]);
 
         Schema::create('books', function ($table) {
@@ -70,8 +62,8 @@ class CommonTest extends TestCase
     public function createRandomUser()
     {
         return User::query()->create([
-            'email'    => $this->faker->unique()->email,
-            'name'     => $this->faker->name,
+            'email' => $this->faker->unique()->email,
+            'name' => $this->faker->name,
             'password' => Hash::make($this->faker->password),
         ]);
     }
@@ -88,7 +80,7 @@ class CommonTest extends TestCase
         ]);
     }
 
-    public function testBasicReport()
+    public function testBasicAlert()
     {
         /** @var User $user */
         $user = $this->createRandomUser();
@@ -96,39 +88,37 @@ class CommonTest extends TestCase
         /* @var Stub $stub */
         $stub = $this->createRandomStub();
 
-        $reportItems = ReportItem::query()->inRandomOrder()->take(3)->get();
-        $userMessage = $this->faker->text;
-        $this->assertFalse($stub->isReported());
-        $this->assertFalse($stub->isReported);
+        $this->assertFalse($stub->isAlertedBy());
+        $this->assertFalse($stub->isAlerted());
+        $this->assertFalse($stub->isAlerted);
+        $this->assertEquals(0, $stub->alertsCount());
+        $this->assertEquals(0, $stub->alertsCount);
 
-        $report = $stub->createReport($reportItems->pluck('id')->toArray(), $userMessage);
+        $alert = $stub->createAlert();
 
-        $this->assertNotNull($report);
+        $this->assertNotNull($alert);
+        $this->assertTrue($alert->isNew());
+        $this->assertTrue($alert->isNew);
+        $this->assertFalse($alert->isSeen());
+        $this->assertFalse($alert->isSeen);
 
-        $this->assertDatabaseHas('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $user->id,
-            'user_message'    => $userMessage,
-            'admin_id'        => null,
-            'admin_message'   => null,
-            'resolved_at'     => null,
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'alertable_type' => $stub->getMorphClass(),
+            'alertable_id' => $stub->id,
+            'user_id' => $user->id,
+            'type' => 'alert',
+            'description' => null,
+            'seen_at' => null,
         ]);
 
-        /** @var ReportItem $reportItem */
-        foreach ($reportItems as $reportItem) {
-            $this->assertDatabaseHas('larareport_rel_report_report_item', [
-                'report_id'      => $report->id,
-                'report_item_id' => $reportItem->id,
-            ]);
-        }
-        $this->assertEquals(1, $stub->reportsCount());
-        $this->assertEquals(1, $stub->reportsCount);
-        $this->assertTrue($stub->isReported());
-        $this->assertTrue($stub->isReported);
+        $this->assertEquals(1, $stub->alertsCount());
+        $this->assertEquals(1, $stub->alertsCount);
+        $this->assertTrue($stub->isAlertedBy());
+        $this->assertTrue($stub->isAlerted());
+        $this->assertTrue($stub->isAlerted);
     }
 
-    public function testReportWithUser()
+    public function testAlertWithType()
     {
         /** @var User $user */
         $user = $this->createRandomUser();
@@ -136,42 +126,163 @@ class CommonTest extends TestCase
         /* @var Stub $stub */
         $stub = $this->createRandomStub();
 
-        $reporter = $this->createRandomUser();
+        $this->assertFalse($stub->isAlertedBy());
+        $this->assertFalse($stub->isAlerted());
+        $this->assertFalse($stub->isAlerted);
+        $this->assertEquals(0, $stub->alertsCount());
+        $this->assertEquals(0, $stub->alertsCount);
 
-        $reportItems = ReportItem::query()->inRandomOrder()->take(3)->get();
-        $userMessage = $this->faker->text;
+        $alert = $stub->createAlert('some-type');
 
-        $this->assertFalse($stub->isReported($reporter));
+        $this->assertNotNull($alert);
+        $this->assertTrue($alert->isNew());
+        $this->assertTrue($alert->isNew);
+        $this->assertFalse($alert->isSeen());
+        $this->assertFalse($alert->isSeen);
 
-        $report = $stub->createReport($reportItems->pluck('id')->toArray(), $userMessage, $reporter);
-
-        $this->assertNotNull($report);
-
-        $this->assertDatabaseHas('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $reporter->id,
-            'user_message'    => $userMessage,
-            'admin_id'        => null,
-            'admin_message'   => null,
-            'resolved_at'     => null,
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'alertable_type' => $stub->getMorphClass(),
+            'alertable_id' => $stub->id,
+            'user_id' => $user->id,
+            'type' => 'some-type',
+            'description' => null,
+            'seen_at' => null,
         ]);
 
-        /** @var ReportItem $reportItem */
-        foreach ($reportItems as $reportItem) {
-            $this->assertDatabaseHas('larareport_rel_report_report_item', [
-                'report_id'      => $report->id,
-                'report_item_id' => $reportItem->id,
-            ]);
-        }
-        $this->assertEquals(1, $stub->reportsCount());
-        $this->assertEquals(1, $stub->reportsCount);
-        $this->assertTrue($stub->isReported($reporter));
-        $this->assertFalse($stub->isReported());
-        $this->assertFalse($stub->isReported);
+        $this->assertEquals(1, $stub->alertsCount());
+        $this->assertEquals(1, $stub->alertsCount);
+        $this->assertTrue($stub->isAlertedBy($user));
+        $this->assertTrue($stub->isAlertedBy());
+        $this->assertTrue($stub->isAlerted());
+        $this->assertTrue($stub->isAlerted);
     }
 
-    public function testMultipleReports()
+    public function testAlertWithUser()
+    {
+        /** @var User $user */
+        $user = $this->createRandomUser();
+        $this->actingAs($user);
+        /* @var Stub $stub */
+        $stub = $this->createRandomStub();
+        /** @var User $alerter */
+        $alerter = $this->createRandomUser();
+
+        $this->assertFalse($stub->isAlertedBy($alerter));
+        $this->assertFalse($stub->isAlerted());
+        $this->assertFalse($stub->isAlerted);
+        $this->assertEquals(0, $stub->alertsCount());
+        $this->assertEquals(0, $stub->alertsCount);
+
+        $alert = $stub->createAlert('alert', $alerter);
+
+        $this->assertNotNull($alert);
+        $this->assertTrue($alert->isNew());
+        $this->assertTrue($alert->isNew);
+        $this->assertFalse($alert->isSeen());
+        $this->assertFalse($alert->isSeen);
+
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'alertable_type' => $stub->getMorphClass(),
+            'alertable_id' => $stub->id,
+            'user_id' => $alerter->id,
+            'type' => 'alert',
+            'description' => null,
+            'seen_at' => null,
+        ]);
+
+        $this->assertEquals(1, $stub->alertsCount());
+        $this->assertEquals(1, $stub->alertsCount);
+        $this->assertTrue($stub->isAlertedBy($alerter));
+        $this->assertFalse($stub->isAlertedBy());
+        $this->assertTrue($stub->isAlerted());
+        $this->assertTrue($stub->isAlerted);
+    }
+
+    public function testAlertWithUserAndType()
+    {
+        /** @var User $user */
+        $user = $this->createRandomUser();
+        $this->actingAs($user);
+        /* @var Stub $stub */
+        $stub = $this->createRandomStub();
+        /** @var User $alerter */
+        $alerter = $this->createRandomUser();
+
+        $this->assertFalse($stub->isAlertedBy($alerter));
+        $this->assertFalse($stub->isAlerted());
+        $this->assertFalse($stub->isAlerted);
+        $this->assertEquals(0, $stub->alertsCount());
+        $this->assertEquals(0, $stub->alertsCount);
+
+        $alert = $stub->createAlert('some-type', $alerter);
+
+        $this->assertNotNull($alert);
+        $this->assertTrue($alert->isNew());
+        $this->assertTrue($alert->isNew);
+        $this->assertFalse($alert->isSeen());
+        $this->assertFalse($alert->isSeen);
+
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'alertable_type' => $stub->getMorphClass(),
+            'alertable_id' => $stub->id,
+            'user_id' => $alerter->id,
+            'type' => 'some-type',
+            'description' => null,
+            'seen_at' => null,
+        ]);
+
+        $this->assertEquals(1, $stub->alertsCount());
+        $this->assertEquals(1, $stub->alertsCount);
+        $this->assertTrue($stub->isAlertedBy($alerter));
+        $this->assertFalse($stub->isAlertedBy());
+        $this->assertTrue($stub->isAlerted());
+        $this->assertTrue($stub->isAlerted);
+    }
+
+    public function testAlertWithUserAndTypeAndDescription()
+    {
+        /** @var User $user */
+        $user = $this->createRandomUser();
+        $this->actingAs($user);
+        /* @var Stub $stub */
+        $stub = $this->createRandomStub();
+        /** @var User $alerter */
+        $alerter = $this->createRandomUser();
+
+        $this->assertFalse($stub->isAlertedBy($alerter));
+        $this->assertFalse($stub->isAlerted());
+        $this->assertFalse($stub->isAlerted);
+        $this->assertEquals(0, $stub->alertsCount());
+        $this->assertEquals(0, $stub->alertsCount);
+
+        $description = $this->faker->text;
+
+        $alert = $stub->createAlert('some-type', $alerter, $description);
+
+        $this->assertNotNull($alert);
+        $this->assertTrue($alert->isNew());
+        $this->assertTrue($alert->isNew);
+        $this->assertFalse($alert->isSeen());
+        $this->assertFalse($alert->isSeen);
+
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'alertable_type' => $stub->getMorphClass(),
+            'alertable_id' => $stub->id,
+            'user_id' => $alerter->id,
+            'type' => 'some-type',
+            'description' => $description,
+            'seen_at' => null,
+        ]);
+
+        $this->assertEquals(1, $stub->alertsCount());
+        $this->assertEquals(1, $stub->alertsCount);
+        $this->assertTrue($stub->isAlertedBy($alerter));
+        $this->assertFalse($stub->isAlertedBy());
+        $this->assertTrue($stub->isAlerted());
+        $this->assertTrue($stub->isAlerted);
+    }
+
+    public function testMultipleAlerts()
     {
         $stub = $this->createRandomStub();
 
@@ -179,487 +290,226 @@ class CommonTest extends TestCase
 
         for ($i = 0; $i < 10; $i++) {
             $data[] = [
-                'reporter'    => $this->createRandomUser(),
-                'reportItems' => ReportItem::query()->inRandomOrder()->take(3)->get(),
-                'userMessage' => $this->faker->text,
+                'alerter' => $this->createRandomUser(),
+                'type' => $this->faker->word,
+                'description' => $this->faker->text,
             ];
         }
 
+        $this->assertFalse($stub->isAlerted());
+        $this->assertFalse($stub->isAlerted);
         foreach ($data as &$datum) {
-            $this->assertFalse($stub->isReported($datum['reporter']));
+            $this->assertFalse($stub->isAlertedBy($datum['alerter']));
 
-            $datum['report'] = $stub->createReport(
-                $datum['reportItems']->pluck('id')->toArray(),
-                $datum['userMessage'],
-                $datum['reporter']
+            /** @var Alert $alert */
+            $alert = $stub->createAlert(
+                $datum['type'],
+                $datum['alerter'],
+                $datum['description']
             );
+
+            $this->assertNotNull($alert);
+            $this->assertTrue($alert->isNew());
+            $this->assertTrue($alert->isNew);
+            $this->assertFalse($alert->isSeen());
+            $this->assertFalse($alert->isSeen);
         }
 
         foreach ($data as $datum) {
-            $this->assertDatabaseHas('larareport_reports', [
-                'reportable_type' => $stub->getMorphClass(),
-                'reportable_id'   => $stub->id,
-                'user_id'         => $datum['reporter']->id,
-                'user_message'    => $datum['userMessage'],
-                'admin_id'        => null,
-                'admin_message'   => null,
-                'resolved_at'     => null,
+            $this->assertDatabaseHas('laraalert_alerts', [
+                'alertable_type' => $stub->getMorphClass(),
+                'alertable_id' => $stub->id,
+                'user_id' => $datum['alerter']->id,
+                'description' => $datum['description'],
+                'type' => $datum['type'],
+                'seen_at' => null,
             ]);
 
-            /** @var ReportItem $reportItem */
-            foreach ($datum['reportItems'] as $reportItem) {
-                $this->assertDatabaseHas('larareport_rel_report_report_item', [
-                    'report_id'      => $datum['report']->id,
-                    'report_item_id' => $reportItem->id,
-                ]);
-            }
-
-            $this->assertTrue($stub->isReported($datum['reporter']));
-            $this->assertFalse($stub->isReported());
-            $this->assertFalse($stub->isReported);
+            $this->assertTrue($stub->isAlertedBy($datum['alerter']));
+            $this->assertFalse($stub->isAlertedBy());
         }
 
-        $this->assertEquals(count($data), $stub->reportsCount());
-        $this->assertEquals(count($data), $stub->reportsCount);
+        $this->asserttrue($stub->isAlerted());
+        $this->asserttrue($stub->isAlerted);
+        $this->assertEquals(count($data), $stub->alertsCount());
+        $this->assertEquals(count($data), $stub->alertsCount);
     }
 
-    public function testRecreateReport()
+    public function testRecreateAlert()
     {
         $stub = $this->createRandomStub();
         $user = $this->createRandomUser();
         $this->actingAs($user);
 
-        $userMessage = $this->faker->text;
-        $reportItems = ReportItem::query()->inRandomOrder()->take(3)->get();
+        $type = $this->faker->word;
+        $description = $this->faker->text;
 
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $userMessage,
+        /** @var Alert $alert */
+        $alert = $stub->alerts()->save(new Alert([
+            'user_id' => $user->id,
+            'type' => $type,
+            'description' => $description,
         ]));
-        $report->reportItems()->attach($reportItems->pluck('id')->toArray());
 
-        $this->assertEquals(1, $stub->reportsCount());
-        $this->assertEquals(1, $stub->reportsCount);
-        $this->assertTrue($stub->isReported());
-        $this->assertTrue($stub->isReported);
+        $this->assertEquals(1, $stub->alertsCount());
+        $this->assertEquals(1, $stub->alertsCount);
+        $this->assertTrue($stub->isAlertedBy());
+        $this->assertTrue($stub->isAlerted());
+        $this->assertTrue($stub->isAlerted);
 
-        $newUserMessage = $this->faker->text;
-        $newReportItems = ReportItem::query()
-            ->whereNotIn('id', $reportItems->pluck('id')->toArray())
-            ->inRandomOrder()
-            ->take(3)
-            ->get();
+        $newType = $this->faker->word;
+        $newDescription = $this->faker->text;
 
-        $newReport = $stub->createReport($newReportItems->pluck('id')->toArray(), $newUserMessage);
+        $newAlert = $stub->createAlert($newType, null, $newDescription);
 
-        $this->assertDatabaseMissing('larareport_reports', ['id' => $report->id]);
+        $this->assertDatabaseHas('laraalert_alerts', ['id' => $alert->id]);
 
-        $this->assertDatabaseMissing('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $user->id,
-            'user_message'    => $userMessage,
-            'admin_id'        => null,
-            'admin_message'   => null,
-            'resolved_at'     => null,
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'alertable_type' => $stub->getMorphClass(),
+            'alertable_id' => $stub->id,
+            'user_id' => $user->id,
+            'type' => $type,
+            'description' => $description,
+            'seen_at' => null,
         ]);
 
-        /** @var ReportItem $reportItem */
-        foreach ($reportItems as $reportItem) {
-            $this->assertDatabaseMissing('larareport_rel_report_report_item', [
-                'report_id'      => $report->id,
-                'report_item_id' => $reportItem->id,
-            ]);
-        }
-
-        $this->assertDatabaseHas('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $user->id,
-            'user_message'    => $newUserMessage,
-            'admin_id'        => null,
-            'admin_message'   => null,
-            'resolved_at'     => null,
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'alertable_type' => $stub->getMorphClass(),
+            'alertable_id' => $stub->id,
+            'user_id' => $user->id,
+            'type' => $newType,
+            'description' => $newDescription,
+            'seen_at' => null,
         ]);
 
-        /** @var ReportItem $reportItem */
-        foreach ($newReportItems as $reportItem) {
-            $this->assertDatabaseHas('larareport_rel_report_report_item', [
-                'report_id'      => $newReport->id,
-                'report_item_id' => $reportItem->id,
-            ]);
-        }
-
-        $this->assertEquals(1, $stub->reportsCount());
-        $this->assertEquals(1, $stub->reportsCount);
-        $this->assertTrue($stub->isReported());
-        $this->assertTrue($stub->isReported);
+        $this->assertEquals(2, $stub->alertsCount());
+        $this->assertEquals(2, $stub->alertsCount);
+        $this->assertTrue($stub->isAlertedBy());
+        $this->assertTrue($stub->isAlerted());
+        $this->assertTrue($stub->isAlerted);
     }
 
-    public function testRecreateReportWithUser()
+    public function testRecreateAlertWithUser()
     {
         $stub = $this->createRandomStub();
         $this->actingAs($this->createRandomUser());
 
-        $reporter = $this->createRandomUser();
-        $userMessage = $this->faker->text;
-        $reportItems = ReportItem::query()->inRandomOrder()->take(3)->get();
+        $alerter = $this->createRandomUser();
+        $type = $this->faker->word;
+        $description = $this->faker->text;
 
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $reporter->id,
-            'user_message' => $userMessage,
+        /** @var Alert $alert */
+        $alert = $stub->alerts()->save(new Alert([
+            'user_id' => $alerter->id,
+            'type' => $type,
+            'description' => $description,
         ]));
-        $report->reportItems()->attach($reportItems->pluck('id')->toArray());
 
-        $this->assertEquals(1, $stub->reportsCount());
-        $this->assertEquals(1, $stub->reportsCount);
-        $this->assertTrue($stub->isReported($reporter));
+        $this->assertEquals(1, $stub->alertsCount());
+        $this->assertEquals(1, $stub->alertsCount);
+        $this->assertTrue($stub->isAlertedBy($alerter));
 
-        $newUserMessage = $this->faker->text;
-        $newReportItems = ReportItem::query()
-            ->whereNotIn('id', $reportItems->pluck('id')->toArray())
-            ->inRandomOrder()
-            ->take(3)
-            ->get();
+        $newType = $this->faker->word;
+        $newDescription = $this->faker->text;
 
-        $newReport = $stub->createReport($newReportItems->pluck('id')->toArray(), $newUserMessage, $reporter);
+        $newAlert = $stub->createAlert($newType, $alerter, $newDescription);
 
-        $this->assertDatabaseMissing('larareport_reports', ['id' => $report->id]);
+        $this->assertTrue($newAlert->isNew());
+        $this->assertTrue($newAlert->isNew);
+        $this->assertFalse($newAlert->isSeen());
+        $this->assertFalse($newAlert->isSeen);
 
-        $this->assertDatabaseMissing('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $reporter->id,
-            'user_message'    => $userMessage,
-            'admin_id'        => null,
-            'admin_message'   => null,
-            'resolved_at'     => null,
+        $this->assertDatabaseHas('laraalert_alerts', ['id' => $alert->id]);
+
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'alertable_type' => $stub->getMorphClass(),
+            'alertable_id' => $stub->id,
+            'user_id' => $alerter->id,
+            'type' => $type,
+            'description' => $description,
+            'seen_at' => null,
         ]);
 
-        /** @var ReportItem $reportItem */
-        foreach ($reportItems as $reportItem) {
-            $this->assertDatabaseMissing('larareport_rel_report_report_item', [
-                'report_id'      => $report->id,
-                'report_item_id' => $reportItem->id,
-            ]);
-        }
-
-        $this->assertDatabaseHas('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $reporter->id,
-            'user_message'    => $newUserMessage,
-            'admin_id'        => null,
-            'admin_message'   => null,
-            'resolved_at'     => null,
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'alertable_type' => $stub->getMorphClass(),
+            'alertable_id' => $stub->id,
+            'user_id' => $alerter->id,
+            'type' => $newType,
+            'description' => $newDescription,
+            'seen_at' => null,
         ]);
 
-        /** @var ReportItem $reportItem */
-        foreach ($newReportItems as $reportItem) {
-            $this->assertDatabaseHas('larareport_rel_report_report_item', [
-                'report_id'      => $newReport->id,
-                'report_item_id' => $reportItem->id,
-            ]);
-        }
-
-        $this->assertEquals(1, $stub->reportsCount());
-        $this->assertEquals(1, $stub->reportsCount);
-        $this->assertTrue($stub->isReported($reporter));
-        $this->assertFalse($stub->isReported());
-        $this->assertFalse($stub->isReported);
+        $this->assertEquals(2, $stub->alertsCount());
+        $this->assertEquals(2, $stub->alertsCount);
+        $this->assertTrue($stub->isAlertedBy($alerter));
+        $this->assertFalse($stub->isAlertedBy());
+        $this->assertTrue($stub->isAlerted());
+        $this->assertTrue($stub->isAlerted);
     }
 
-    public function testAssignReport()
+    public function testSeenAlert()
     {
         $stub = $this->createRandomStub();
         $user = $this->createRandomUser();
         $this->actingAs($user);
 
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
+        /** @var Alert $alert */
+        $alert = $stub->alerts()->save(new Alert(['user_id' => $user->id,]));
 
-        $this->assertTrue($report->assign());
+        $this->assertTrue($alert->isNew());
+        $this->assertFalse($alert->isSeen());
 
-        $this->assertDatabaseHas('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $user->id,
-            'admin_id'        => $user->id,
-        ]);
-    }
+        $this->assertTrue($alert->seen());
 
-    public function testAssignReportToUser()
-    {
-        $stub = $this->createRandomStub();
-        $user = $this->createRandomUser();
-        $admin = $this->createRandomUser();
-        $this->actingAs($user);
-
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
-
-        $this->assertTrue($report->assign($admin));
-
-        $this->assertDatabaseHas('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $user->id,
-            'admin_id'        => $admin->id,
-        ]);
-    }
-
-    public function testAssignReportToNotLoggedIn()
-    {
-        $stub = $this->createRandomStub();
-        $user = $this->createRandomUser();
-
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
-
-        $this->assertFalse($report->assign());
-
-        $this->assertDatabaseHas('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $user->id,
-            'admin_id'        => null,
-        ]);
-    }
-
-    public function testResolveReport()
-    {
-        $stub = $this->createRandomStub();
-        $user = $this->createRandomUser();
-        $this->actingAs($user);
-
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
-
-        $this->assertFalse($report->isResolved());
-
-        $this->assertTrue($report->resolve());
-
-        $this->assertDatabaseHas('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $user->id,
-            'admin_id'        => $user->id,
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'alertable_type' => $stub->getMorphClass(),
+            'alertable_id' => $stub->id,
+            'user_id' => $user->id,
         ]);
 
-        $this->assertTrue($report->isResolved());
+        $this->assertFalse($alert->isNew());
+        $this->assertTrue($alert->isSeen());
     }
 
-    public function testResolveReportWithUser()
-    {
-        $stub = $this->createRandomStub();
-        $user = $this->createRandomUser();
-        $admin = $this->createRandomUser();
-        $this->actingAs($user);
-
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
-
-        $this->assertFalse($report->isResolved());
-
-        $this->assertTrue($report->resolve($admin));
-
-        $this->assertDatabaseHas('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $user->id,
-            'admin_id'        => $admin->id,
-        ]);
-
-        $this->assertTrue($report->isResolved());
-    }
-
-    public function testResolveReportNotLoggedIn()
+    public function testUserMethodOfAlertModel()
     {
         $stub = $this->createRandomStub();
         $user = $this->createRandomUser();
 
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
+        /** @var Alert $alert */
+        $alert = $stub->alerts()->save(new Alert(['user_id' => $user->id]));
 
-        $this->assertFalse($report->isResolved());
-
-        $this->assertFalse($report->resolve());
-
-        $this->assertDatabaseHas('larareport_reports', [
-            'reportable_type' => $stub->getMorphClass(),
-            'reportable_id'   => $stub->id,
-            'user_id'         => $user->id,
-            'admin_id'        => null,
-        ]);
-
-        $this->assertFalse($report->isResolved());
+        $this->assertEquals($user->id, $alert->user->id);
     }
 
-    public function testUserMethodOfReportModel()
+    public function testAlertableMethodOfAlertModel()
     {
         $stub = $this->createRandomStub();
         $user = $this->createRandomUser();
 
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
+        /** @var Alert $alert */
+        $alert = $stub->alerts()->save(new Alert(['user_id' => $user->id]));
 
-        $this->assertEquals($user->id, $report->user->id);
+        $this->assertEquals($stub->id, $alert->alertable->id);
     }
 
-    public function testAdminMethodOfReportModel()
-    {
-        $stub = $this->createRandomStub();
-        $user = $this->createRandomUser();
-        $admin = $this->createRandomUser();
-
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-            'admin_id'     => $admin->id,
-        ]));
-
-        $this->assertEquals($admin->id, $report->admin->id);
-    }
-
-    public function testAdminMethodOfReportModelWhenAdminIsNull()
+    public function testDeleteModel()
     {
         $stub = $this->createRandomStub();
         $user = $this->createRandomUser();
 
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
-
-        $this->assertNull($report->admin);
-    }
-
-    public function testReportItemsMethodOfReportModel()
-    {
-        $stub = $this->createRandomStub();
-        $user = $this->createRandomUser();
-
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
-
-        $reportItems = ReportItem::query()->inRandomOrder()->take(3)->get();
-
-        $report->reportItems()->attach($reportItems->pluck('id')->toArray());
-
-        foreach ($reportItems as $reportItem) {
-            $this->assertDatabaseHas('larareport_rel_report_report_item', [
-                'report_id'      => $report->id,
-                'report_item_id' => $reportItem->id,
-            ]);
-        }
-
-        foreach ($report->reportItems as $reportItem) {
-            in_array($reportItem->id, $reportItems->pluck('id')->toArray());
-        }
-
-        $this->assertEquals($reportItems->count(), $report->reportItems()->count());
-    }
-
-    public function testReportItemsMethodOfReportModelWhenNoAttachedReportItemsExists()
-    {
-        $stub = $this->createRandomStub();
-        $user = $this->createRandomUser();
-
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
-
-        $this->assertDatabaseMissing('larareport_rel_report_report_item', [
-            'report_id' => $report->id,
-        ]);
-
-        $this->assertEquals(0, $report->reportItems()->count());
-    }
-
-    public function TestReportsModelOfReportItemsModel()
-    {
-        $stub = $this->createRandomStub();
-        $user = $this->createRandomUser();
-
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
-
-        /** @var ReportItem $reportItem */
-        $reportItem = ReportItem::query()->inRandomOrder()->first();
-
-        $report->reportItems()->attach($reportItem->id);
-
-        $this->assertEquals(1, $reportItem->reports()->count());
-        $this->assertEquals($report->id, $reportItem->reports[0]->id);
-    }
-
-    public function TestDeleteModel()
-    {
-        $stub = $this->createRandomStub();
-        $user = $this->createRandomUser();
-
-        /** @var Alert $report */
-        $report = $stub->reports()->save(new Alert([
-            'user_id'      => $user->id,
-            'user_message' => $this->faker->text,
-        ]));
-
-        /** @var ReportItem $reportItem */
-        $reportItem = ReportItem::query()->inRandomOrder()->first();
-
-        $report->reportItems()->attach($reportItem->id);
+        /** @var Alert $alert */
+        $alert = $stub->alerts()->save(new Alert(['user_id' => $user->id]));
 
         $stub->delete();
 
-        $this->assertDatabaseMissing('larareport_reports', []);
-        $this->assertDatabaseMissing('larareport_rel_report_report_item', []);
-    }
-
-    public function TestReportsModelOfReportItemsModelWhenNoReportAttached()
-    {
-        /** @var ReportItem $reportItem */
-        $reportItem = ReportItem::query()->inRandomOrder()->first();
-
-        $this->assertEquals(0, $reportItem->reports()->count());
+        $this->assertDatabaseMissing('laraalert_alerts', []);
     }
 }
 
 class Stub extends Eloquent
 {
-    use Reportable;
+    use Alertable;
 
     protected $morphClass = 'Stub';
 
