@@ -2,10 +2,10 @@
 
 namespace Tests;
 
-use Inpin\LaraReport\LaraAlertServiceProvider;
+use Inpin\LaraAlert\LaraAlertServiceProvider;
 use Orchestra\Database\ConsoleServiceProvider;
 
-class TestCase extends \Orchestra\Testbench\TestCase
+class LaraAlertTestCase extends \Orchestra\Testbench\TestCase
 {
     protected function getPackageProviders($app)
     {
