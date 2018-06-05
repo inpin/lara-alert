@@ -40,7 +40,7 @@ trait Alertable
     public function scopeWhereAlertedBy($query, $guard = null)
     {
         if (!($guard instanceof User)) {
-            $guard = $this->loggedInUser($guard);
+            $guard = $this->getLoggedInUserForLaraAlert($guard);
         }
 
         return $query->whereHas('alerts', function ($query) use ($guard) {
@@ -79,7 +79,7 @@ trait Alertable
     public function createAlert($type = 'alert', $guard = null, $description = null)
     {
         if (!($guard instanceof User)) {
-            $guard = $this->loggedInUser($guard);
+            $guard = $this->getLoggedInUserForLaraAlert($guard);
 
             if (is_null($guard)) {
                 return;
@@ -108,7 +108,7 @@ trait Alertable
     public function isAlertedBy($guard = null)
     {
         if (!($guard instanceof User)) {
-            $guard = $this->loggedInUser($guard);
+            $guard = $this->getLoggedInUserForLaraAlert($guard);
 
             if (is_null($guard)) {
                 return false;
@@ -135,7 +135,7 @@ trait Alertable
      *
      * @return \Illuminate\Contracts\Auth\Authenticatable|null
      */
-    public function loggedInUser($guard)
+    public function getLoggedInUserForLaraAlert($guard)
     {
         return auth($guard)->user();
     }
