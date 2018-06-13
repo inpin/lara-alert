@@ -9,6 +9,7 @@ use Illuminate\Foundation\Auth\User;
 /**
  * Class Alert.
  *
+ * @property int id
  * @property int user_id
  * @property Carbon seen_at
  * @property string description
