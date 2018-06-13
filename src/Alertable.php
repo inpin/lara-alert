@@ -68,7 +68,7 @@ trait Alertable
     }
 
     /**
-     * This method will create a alert on current model, attach given alertItemIds, and return it.
+     * This method will create an alert on current model, attach given alertItemIds, and return it.
      *
      * @param string      $type
      * @param User|string $guard
@@ -82,7 +82,7 @@ trait Alertable
             $guard = $this->getLoggedInUserForLaraAlert($guard);
 
             if (is_null($guard)) {
-                return;
+                return null;
             }
         }
 
@@ -96,6 +96,33 @@ trait Alertable
         $alert = $this->alerts()->save($alert);
 
         return $alert;
+    }
+
+    /**
+     * This method will delete alerts on current model, attach given alertItemIds, and return it.
+     * If guard is null, then it will delete all alerts, else will delete alerts for specific user.
+     *
+     * @param string $type
+     * @param User|string $guard
+     *
+     * @return bool
+     */
+    public function deleteAlert($type = 'alert', $guard = null)
+    {
+        if (!($guard instanceof User) && is_string($guard)) {
+            $guard = $this->getLoggedInUserForLaraAlert($guard);
+
+            if (is_null($guard)) {
+                return false;
+            }
+        }
+
+        return $this->alerts()
+            ->where('type', $type)
+            ->when(!is_null($guard), function (Builder $query) use ($guard) {
+                $query->where('user_id', $guard->id);
+            })
+            ->delete();
     }
 
     /**
@@ -120,11 +147,21 @@ trait Alertable
             ->exists();
     }
 
+    /**
+     * Determines if current object is alerted or not.
+     *
+     * @return bool
+     */
     public function isAlerted()
     {
         return $this->alerts()->exists();
     }
 
+    /**
+     * Retrieve number of alerts.
+     *
+     * @return int
+     */
     public function alertsCount()
     {
         return $this->alerts()->count();

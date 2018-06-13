@@ -503,7 +503,101 @@ class CommonTest extends LaraAlertTestCase
 
         $stub->delete();
 
-        $this->assertDatabaseMissing('laraalert_alerts', []);
+        $this->assertDatabaseMissing('laraalert_alerts', ['id' => $alert->id]);
+    }
+
+    public function testDeleteAlert()
+    {
+        $stub = $this->createRandomStub();
+        $user1 = $this->createRandomUser();
+        $user2 = $this->createRandomUser();
+
+        /** @var Alert $alert */
+        $alert1 = $stub->alerts()->save(new Alert([
+            'user_id' => $user1->id,
+            'type'    => 'some-type',
+        ]));
+
+        /** @var Alert $alert */
+        $alert2 = $stub->alerts()->save(new Alert([
+            'user_id' => $user2->id,
+            'type'    => 'some-type',
+        ]));
+
+        $stub->deleteAlert('some-type');
+
+        $this->assertDatabaseMissing('laraalert_alerts', [
+            'id' => $alert1->id
+        ]);
+        $this->assertDatabaseMissing('laraalert_alerts', [
+            'id' => $alert2->id
+        ]);
+    }
+
+    public function testDeleteAlertOfSpecificUser()
+    {
+        $stub = $this->createRandomStub();
+        $user1 = $this->createRandomUser();
+        $user2 = $this->createRandomUser();
+
+        /** @var Alert $alert */
+        $alert1 = $stub->alerts()->save(new Alert([
+            'user_id' => $user1->id,
+            'type'    => 'some-type',
+        ]));
+
+        /** @var Alert $alert */
+        $alert2 = $stub->alerts()->save(new Alert([
+            'user_id' => $user2->id,
+            'type'    => 'some-type',
+        ]));
+
+        $stub->deleteAlert('some-type', $user1);
+
+        $this->assertDatabaseMissing('laraalert_alerts', [
+            'id' => $alert1->id
+        ]);
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'id' => $alert2->id
+        ]);
+    }
+
+    public function testDeleteAlertOfSpecificType()
+    {
+        $stub = $this->createRandomStub();
+        $user1 = $this->createRandomUser();
+        $user2 = $this->createRandomUser();
+        $user3 = $this->createRandomUser();
+
+        /** @var Alert $alert */
+        $alert1 = $stub->alerts()->save(new Alert([
+            'user_id' => $user1->id,
+            'type'    => 'some-type',
+        ]));
+
+        /** @var Alert $alert */
+        $alert2 = $stub->alerts()->save(new Alert([
+            'user_id' => $user2->id,
+            'type'    => 'some-type',
+        ]));
+
+        /** @var Alert $alert */
+        $alert3 = $stub->alerts()->save(new Alert([
+            'user_id' => $user3->id,
+            'type'    => 'some-type-else',
+        ]));
+
+        $stub->deleteAlert('some-type');
+
+        $this->assertDatabaseMissing('laraalert_alerts', [
+            'id' => $alert1->id
+        ]);
+        $this->assertDatabaseMissing('laraalert_alerts', [
+            'id' => $alert2->id
+        ]);
+        $this->assertDatabaseHas('laraalert_alerts', [
+            'id' => $alert3->id
+        ]);
     }
 }
 
