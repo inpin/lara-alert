@@ -82,7 +82,7 @@ trait Alertable
             $guard = $this->getLoggedInUserForLaraAlert($guard);
 
             if (is_null($guard)) {
-                return null;
+                return;
             }
         }
 
@@ -102,7 +102,7 @@ trait Alertable
      * This method will delete alerts on current model, attach given alertItemIds, and return it.
      * If guard is null, then it will delete all alerts, else will delete alerts for specific user.
      *
-     * @param string $type
+     * @param string      $type
      * @param User|string $guard
      *
      * @return bool

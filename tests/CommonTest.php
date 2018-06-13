@@ -527,10 +527,10 @@ class CommonTest extends LaraAlertTestCase
         $stub->deleteAlert('some-type');
 
         $this->assertDatabaseMissing('laraalert_alerts', [
-            'id' => $alert1->id
+            'id' => $alert1->id,
         ]);
         $this->assertDatabaseMissing('laraalert_alerts', [
-            'id' => $alert2->id
+            'id' => $alert2->id,
         ]);
     }
 
@@ -555,10 +555,10 @@ class CommonTest extends LaraAlertTestCase
         $stub->deleteAlert('some-type', $user1);
 
         $this->assertDatabaseMissing('laraalert_alerts', [
-            'id' => $alert1->id
+            'id' => $alert1->id,
         ]);
         $this->assertDatabaseHas('laraalert_alerts', [
-            'id' => $alert2->id
+            'id' => $alert2->id,
         ]);
     }
 
@@ -590,13 +590,13 @@ class CommonTest extends LaraAlertTestCase
         $stub->deleteAlert('some-type');
 
         $this->assertDatabaseMissing('laraalert_alerts', [
-            'id' => $alert1->id
+            'id' => $alert1->id,
         ]);
         $this->assertDatabaseMissing('laraalert_alerts', [
-            'id' => $alert2->id
+            'id' => $alert2->id,
         ]);
         $this->assertDatabaseHas('laraalert_alerts', [
-            'id' => $alert3->id
+            'id' => $alert3->id,
         ]);
     }
 }
